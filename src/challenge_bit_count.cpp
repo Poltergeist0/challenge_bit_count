@@ -175,9 +175,9 @@ int main(int argc, char *argv[]) {
 	stopv=Crain::Time::currentTime();
 	std::cout << "max bit count verify=" << cnt<< " in " << stopv-startv<< "ns\n";
 	std::cout << "verify was " << ((stopv-startv)-(stop-start)) << " ns slower (~" << ((stopv-startv)/(stop-start)) << "x slower)\n";
-	if(min>0) min=min-1;
+//	if(min>0) min=min-1;
 	start=Crain::Time::currentTime();
-	cnt=count(max,print)-count(min,print);
+	cnt=count(max,print)-count(((min>0)?min-1:0),print);
 	stop=Crain::Time::currentTime();
 	std::cout << "bit count=" << cnt << " in " << stop-start<< "ns\n";
 	startv=Crain::Time::currentTime();

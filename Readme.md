@@ -27,3 +27,4 @@ Usage       : challenge_bit_count [p] [pv] min max
 
 	Example usage: ./challenge_bit_count 51183 2397854
 
+Note        : Printing messages affects the measured times by several orders of magnitude. If rigorous times are required, do not activate any printing.

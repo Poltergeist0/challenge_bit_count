@@ -118,8 +118,67 @@ long count(const long & val, const bool & print=false){
 	return cnt;
 }
 
+unsigned long countOptimized(const unsigned long & val){
+//	long col=0;//column
+	unsigned long freq2=1;//half frequency
+//	unsigned long freq=2;//frequency
+//	unsigned long maskBlocks=0xffffffff;//32 bit
+//	unsigned long maskRemainder=0x00000001;//32 bit
+	unsigned long maskBlocks=0xfffffffe;//32 bit
+	unsigned long cnt=0;//bit counter
+	unsigned long res=0;
+	unsigned long o=0;
+	while(freq2<=val){//while there are unprocessed columns in the number (not the data type)
+//		long res=countOptimized(val,col,freq2,freq);//count bits for current column
+//		inline long countOptimized(const long & val, const long & column, const long & freq2, const long & freq){
+//			res=val/freq;//get count of full blocks (of 0s and 1s) for the current bit column from zero to number
+//			res*=freq2;//number of 1s in those blocks is half times the number of blocks
+//			res=(val/2) & maskBlocks;//get count of full blocks (of 0s and 1s) for the current bit column from zero to number. Number of 1s in those blocks is half times the number of blocks
+			res=(val & maskBlocks)/2;//get count of full blocks (of 0s and 1s) for the current bit column from zero to number. Number of 1s in those blocks is half times the number of blocks
+//			o=val%freq;//calculate offset (number of bits in incomplete block)
+//			o=val & maskRemainder;//calculate offset (number of bits in incomplete block)
+			o=val & (~maskBlocks);//calculate offset (number of bits in incomplete block)
+			long t=0;//bit count for offset
+			if(o>=freq2) t=o-freq2+1;//if the value of the offset is greater than half the block size then the difference is the number of bits set to 1
+//			res+=t;//increment the offset bits to total
+//			return cnt;
+//		}
+		cnt+=res+t;//add them to total bit count
+//		++col;//increment column
+//		freq2=freq;//calculate new half frequency
+//		freq*=2;//calculate new frequency
+		freq2*=2;//calculate new half frequency
+		maskBlocks*=2;//shift left with zero on the right
+//		maskRemainder=maskRemainder*2+1;//shift left with one on the right
+	}
+	return cnt;
+}
+
 void usage(){
-	std::cout << "Usage: challenge_bit_count [p] [pv] min max\n\nWhere:\np\t prints debug messages\npv\tprints % complete for the slow verification algorithm\n\n";
+	std::cout << "Usage: challenge_bit_count [p] [nv | [pv]] min max\n\nWhere:\np\t prints debug messages\nnv\tdoes not run verification\npv\tprints % complete for the slow verification algorithm\n\n";
+}
+
+void timeQuality() {
+	long timeDifferences=0;//sum of time differences to be averaged
+	long timeMax=0;//max/worst time difference. This is the one that can make odd clock measures show up when measuring only one time difference
+	long cycles=1000000;
+	for(int i=0;i<cycles;++i) {
+		long count=1;//counter to increment while waiting for the value of the clock to increase
+		long startTime = Crain::Time::currentTime();
+		long endTime = Crain::Time::currentTime();
+		//			System.out.print("(" + (endTime-startTime)+")");
+		while(startTime>=endTime) {//must use >= because clock might jump backwards if the program switches CPU core
+			++count;
+			endTime = Crain::Time::currentTime();
+			//				System.out.print("(" + (endTime-startTime)+")");
+		}
+		long timeDiff=count*(endTime-startTime);
+		if(timeMax<timeDiff) timeMax=timeDiff;
+		timeDifferences+=timeDiff;
+	}
+	std::cout << "time quality in nanoseconds:\n";
+	std::cout << "avg time between reads = " << timeDifferences/cycles << "\n";
+	std::cout << "worst time between reads = " << timeMax << "\n\n";
 }
 
 int main(int argc, char *argv[]) {
@@ -127,12 +186,14 @@ int main(int argc, char *argv[]) {
 //	long max=std::stol(argv[2]);
 	long min=1;//min is larger than max on instantiation to detect neither was initialized
 	long max=0;
+	bool verif=true;
 	bool print=false;
 	bool printVerify=false;
 	int c=1;//program parameter parsing counter
 	while(c<argc){//while there are parameters to parse
 		if(std::string(argv[c]).compare("p")==0) print=true;
 		else if(std::string(argv[c]).compare("pv")==0) printVerify=true;
+		else if(std::string(argv[c]).compare("nv")==0) verif=false;
 		else{
 			try{
 				if(min>max){//no value has been set
@@ -157,33 +218,85 @@ int main(int argc, char *argv[]) {
 		usage();
 		exit(0);
 	}
+	timeQuality();
+	int cycles=1000000;
+	long totalSum=0;
+	long startv=0;
+	long stopv=0;
 	long start=Crain::Time::currentTime();
-	long cnt=count(min,print);
+//	long cnt=count(min,print);
+	for(int i=0;i<cycles;++i) {//repeat enough times for clock to update
+		long cnt=count(min,print);
+		totalSum+=cnt;//do something else other than calculating otherwise the for cycle may be optimized out
+	}
 	long stop=Crain::Time::currentTime();
-	std::cout << "min bit count=" << cnt<< " in " << stop-start<< "ns\n";
-	long startv=Crain::Time::currentTime();
-	cnt=verify(min,0,printVerify);
-	long stopv=Crain::Time::currentTime();
-	std::cout << "min bit count verify=" << cnt << " in " << stopv-startv<< "ns\n";
-	std::cout << "verify was " << ((stopv-startv)-(stop-start)) << " ns slower (~" << ((stopv-startv)/(stop-start)) << "x slower)\n";
+	std::cout << "min bit count=" << totalSum/cycles << " in " << (stop-start)/cycles<< "ns\n";
+	totalSum=0;
 	start=Crain::Time::currentTime();
-	cnt=count(max,print);
+//	long cnt=count(min,print);
+	for(int i=0;i<cycles;++i) {//repeat enough times for clock to update
+		long cnt=countOptimized(min);
+		totalSum+=cnt;//do something else other than calculating otherwise the for cycle may be optimized out
+	}
 	stop=Crain::Time::currentTime();
-	std::cout << "max bit count=" << cnt<< " in " << stop-start<< "ns\n";
-	startv=Crain::Time::currentTime();
-	cnt=verify(max,0,printVerify);
-	stopv=Crain::Time::currentTime();
-	std::cout << "max bit count verify=" << cnt<< " in " << stopv-startv<< "ns\n";
-	std::cout << "verify was " << ((stopv-startv)-(stop-start)) << " ns slower (~" << ((stopv-startv)/(stop-start)) << "x slower)\n";
+	std::cout << "optimized min bit count=" << totalSum/cycles << " in " << (stop-start)/cycles<< "ns\n";
+	if(verif){
+		startv=Crain::Time::currentTime();
+		totalSum=verify(min,0,printVerify);
+		stopv=Crain::Time::currentTime();
+		std::cout << "min bit count verify=" << totalSum << " in " << stopv-startv<< "ns\n";
+		std::cout << "verify was " << ((stopv-startv)-(stop-start)/cycles) << " ns slower (~" << ((stopv-startv)/((stop-start)/cycles)) << "x slower)\n";
+	}
+	totalSum=0;
+	start=Crain::Time::currentTime();
+//	cnt=count(max,print);
+	for(int i=0;i<cycles;++i) {//repeat enough times for clock to update
+		long cnt=count(max,print);
+		totalSum+=cnt;//do something else other than calculating otherwise the for cycle may be optimized out
+	}
+	stop=Crain::Time::currentTime();
+	std::cout << "max bit count=" << totalSum/cycles << " in " << (stop-start)/cycles<< "ns\n";
+	totalSum=0;
+	start=Crain::Time::currentTime();
+//	long cnt=count(min,print);
+	for(int i=0;i<cycles;++i) {//repeat enough times for clock to update
+		long cnt=countOptimized(max);
+		totalSum+=cnt;//do something else other than calculating otherwise the for cycle may be optimized out
+	}
+	stop=Crain::Time::currentTime();
+	std::cout << "optimized max bit count=" << totalSum/cycles << " in " << (stop-start)/cycles<< "ns\n";
+	if(verif){
+		startv=Crain::Time::currentTime();
+		totalSum=verify(max,0,printVerify);
+		stopv=Crain::Time::currentTime();
+		std::cout << "max bit count verify=" << totalSum<< " in " << stopv-startv<< "ns\n";
+		std::cout << "verify was " << ((stopv-startv)-(stop-start)/cycles) << " ns slower (~" << ((stopv-startv)/((stop-start)/cycles)) << "x slower)\n";
+	}
 //	if(min>0) min=min-1;
+	totalSum=0;
 	start=Crain::Time::currentTime();
-	cnt=count(max,print)-count(((min>0)?min-1:0),print);
+//	cnt=count(max,print)-count(((min>0)?min-1:0),print);
+	for(int i=0;i<cycles;++i) {//repeat enough times for clock to update
+		long cnt=count(max,print)-count(((min>0)?min-1:0),print);
+		totalSum+=cnt;//do something else other than calculating otherwise the for cycle may be optimized out
+	}
 	stop=Crain::Time::currentTime();
-	std::cout << "bit count=" << cnt << " in " << stop-start<< "ns\n";
-	startv=Crain::Time::currentTime();
-	cnt=verify(max,min,printVerify);
-	stopv=Crain::Time::currentTime();
-	std::cout << "bit count verify=" << cnt << " in " << stopv-startv<< "ns\n";
-	std::cout << "verify was " << ((stopv-startv)-(stop-start)) << " ns slower (~" << ((stopv-startv)/(stop-start)) << "x slower)\n";
+	std::cout << "bit count=" << totalSum/cycles << " in " << (stop-start)/cycles<< "ns\n";
+	totalSum=0;
+	start=Crain::Time::currentTime();
+//	long cnt=count(min,print);
+	for(int i=0;i<cycles;++i) {//repeat enough times for clock to update
+		long cnt=countOptimized(max)-countOptimized(((min>0)?min-1:0));
+		totalSum+=cnt;//do something else other than calculating otherwise the for cycle may be optimized out
+	}
+	stop=Crain::Time::currentTime();
+	std::cout << "optimized bit count=" << totalSum/cycles << " in " << (stop-start)/cycles<< "ns\n";
+	if(verif){
+		startv=Crain::Time::currentTime();
+		totalSum=verify(max,min,printVerify);
+		stopv=Crain::Time::currentTime();
+		std::cout << "bit count verify=" << totalSum << " in " << stopv-startv<< "ns\n";
+		std::cout << "verify was " << ((stopv-startv)-(stop-start)/cycles) << " ns slower (~" << ((stopv-startv)/((stop-start)/cycles)) << "x slower)\n";
+	}
 	return 0;
 }

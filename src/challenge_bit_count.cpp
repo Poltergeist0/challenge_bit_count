@@ -119,37 +119,19 @@ long count(const long & val, const bool & print=false){
 }
 
 unsigned long countOptimized(const unsigned long & val){
-//	long col=0;//column
 	unsigned long freq2=1;//half frequency
-//	unsigned long freq=2;//frequency
-//	unsigned long maskBlocks=0xffffffff;//32 bit
-//	unsigned long maskRemainder=0x00000001;//32 bit
 	unsigned long maskBlocks=0xfffffffe;//32 bit
 	unsigned long cnt=0;//bit counter
 	unsigned long res=0;
 	unsigned long o=0;
 	while(freq2<=val){//while there are unprocessed columns in the number (not the data type)
-//		long res=countOptimized(val,col,freq2,freq);//count bits for current column
-//		inline long countOptimized(const long & val, const long & column, const long & freq2, const long & freq){
-//			res=val/freq;//get count of full blocks (of 0s and 1s) for the current bit column from zero to number
-//			res*=freq2;//number of 1s in those blocks is half times the number of blocks
-//			res=(val/2) & maskBlocks;//get count of full blocks (of 0s and 1s) for the current bit column from zero to number. Number of 1s in those blocks is half times the number of blocks
-			res=(val & maskBlocks)/2;//get count of full blocks (of 0s and 1s) for the current bit column from zero to number. Number of 1s in those blocks is half times the number of blocks
-//			o=val%freq;//calculate offset (number of bits in incomplete block)
-//			o=val & maskRemainder;//calculate offset (number of bits in incomplete block)
-			o=val & (~maskBlocks);//calculate offset (number of bits in incomplete block)
-			long t=0;//bit count for offset
-			if(o>=freq2) t=o-freq2+1;//if the value of the offset is greater than half the block size then the difference is the number of bits set to 1
-//			res+=t;//increment the offset bits to total
-//			return cnt;
-//		}
+		res=(val & maskBlocks)/2;//get count of full blocks (of 0s and 1s) for the current bit column from zero to number. Number of 1s in those blocks is half times the number of blocks
+		o=val & (~maskBlocks);//calculate offset (number of bits in incomplete block)
+		long t=0;//bit count for offset
+		if(o>=freq2) t=o-freq2+1;//if the value of the offset is greater than half the block size then the difference is the number of bits set to 1
 		cnt+=res+t;//add them to total bit count
-//		++col;//increment column
-//		freq2=freq;//calculate new half frequency
-//		freq*=2;//calculate new frequency
 		freq2*=2;//calculate new half frequency
 		maskBlocks*=2;//shift left with zero on the right
-//		maskRemainder=maskRemainder*2+1;//shift left with one on the right
 	}
 	return cnt;
 }

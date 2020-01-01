@@ -119,19 +119,22 @@ long count(const long & val, const bool & print=false){
 }
 
 unsigned long countOptimized(const unsigned long & val){
-	unsigned long freq2=1;//half frequency
+//	unsigned long freq2=1;//half frequency
 	unsigned long maskBlocks=0xfffffffe;//32 bit
+	unsigned long maskDiff=0x1;//32 bit
 	unsigned long cnt=0;//bit counter
-	unsigned long res=0;
 	unsigned long o=0;
-	while(freq2<=val){//while there are unprocessed columns in the number (not the data type)
-		res=(val & maskBlocks)/2;//get count of full blocks (of 0s and 1s) for the current bit column from zero to number. Number of 1s in those blocks is half times the number of blocks
+//	while(freq2<=val){//while there are unprocessed columns in the number (not the data type)
+	while(maskDiff<=val){//while there are unprocessed columns in the number (not the data type)
+//		cnt+=(val & maskBlocks)/2;//get count of full blocks (of 0s and 1s) for the current bit column from zero to number. Number of 1s in those blocks is half times the number of blocks
+		cnt+=(val & maskBlocks)>>1;//get count of full blocks (of 0s and 1s) for the current bit column from zero to number. Number of 1s in those blocks is half times the number of blocks
 		o=val & (~maskBlocks);//calculate offset (number of bits in incomplete block)
-		long t=0;//bit count for offset
-		if(o>=freq2) t=o-freq2+1;//if the value of the offset is greater than half the block size then the difference is the number of bits set to 1
-		cnt+=res+t;//add them to total bit count
-		freq2*=2;//calculate new half frequency
-		maskBlocks*=2;//shift left with zero on the right
+//		if(o>=freq2) cnt+=o-freq2+1;//if the value of the offset is greater than half the block size then the difference is the number of bits set to 1
+		if((o & maskDiff)) cnt+=(o & (~maskDiff))+1;//if the value of the offset is greater than half the block size then the difference is the number of bits set to 1
+//		freq2*=2;//calculate new half frequency
+//		maskBlocks*=2;//shift left with zero on the right
+		maskBlocks=maskBlocks << 1;//shift left with zero on the right
+		maskDiff=maskDiff<<1;
 	}
 	return cnt;
 }
